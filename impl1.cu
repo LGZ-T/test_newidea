@@ -141,7 +141,11 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	int *d_is_changed;
 	int h_is_changed;
 	int count_iterations = 0;
-
+	int threadCount = bcount*bsize;
+	int countWarps = threadCount % 32 ? threadCount / 32 + 1 : threadCount / 32;
+	int nEdgesPerWarp = nEdges % countWarps == 0 ? nEdges / countWarps : nEdges / countWarps + 1;
+	std::cout<<"bcount="<<bcount<<" bsize="<<bsize<<" block bytes="<<sizeof(unsigned long)*6*(nEdgesPerWarp/32+1)<<std::endl;
+	return;
 	cudaMalloc((void**)&d_edges, sizeof(GraphEdge_t)*nEdges);
 	cudaMalloc((void**)&d_distances_curr, sizeof(unsigned int)*nVertices);
 	cudaMalloc((void**)&d_distances_prev, sizeof(unsigned int)*nVertices);
@@ -150,11 +154,8 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	cudaMemcpy(d_edges, edges, sizeof(GraphEdge_t)*nEdges, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_distances_curr, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_distances_prev, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
-	std::cout << "3333333" << std::endl;
 	setTime();
-	int threadCount = bcount*bsize;
-	int countWarps = threadCount % 32 ? threadCount / 32 + 1 : threadCount / 32;
-	int nEdgesPerWarp = nEdges % countWarps == 0 ? nEdges / countWarps : nEdges / countWarps + 1;
+	
 	std::ofstream outputFile("lgzoutfile",std::ios::binary | std::ios::out|std::ios::app);
 	unsigned long *trace = (unsigned long *)malloc(bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
 	unsigned long *trace_gpu;
@@ -163,9 +164,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	for (int i = 0; i < nVertices-1; ++i) {
 		cudaMemset(d_is_changed, 0, sizeof(int));
 		if (isIncore == 1){
-			std::cout<<"9999999"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu, d_edges, nEdges, d_distances_curr, d_distances_curr, d_is_changed);
-			std::cout<<"10 10 10 10 10 10"<<std::endl;
 			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"11 11 11 11 11 11"<<std::endl;
 			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
