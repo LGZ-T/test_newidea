@@ -182,7 +182,7 @@ int main( int argc, char** argv )
 		}
 		
 		//for (int x = 0; x < nEdges; ++x) {std::cout<<"\nEdge - "<<x<<" "<<edges[x].src<<" - "<<edges[x].dest<<" - "<<edges[x].weight<<"\n";}
- 
+		std::cout<<"222222"<<std::endl;
 		switch(processingMethod){
 			case ProcessingType::Push:
 				puller(edges, nEdges, vertex_size, distance, bsize, bcount, syncMethod == InCore, smemMethod == UseSmem);
