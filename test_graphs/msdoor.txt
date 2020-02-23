@@ -1,0 +1,15 @@
+%-------------------------------------------------------------------------------
+% UF Sparse Matrix Collection, Tim Davis
+% http://www.cise.ufl.edu/research/sparse/matrices/INPRO/msdoor
+% name: INPRO/msdoor
+% [medium size door]
+% id: 1644
+% date: 2005
+% author: J. Weiher
+% ed: J. Koster
+% fields: name title A Zeros id notes date author ed kind
+% kind: structural problem
+%-------------------------------------------------------------------------------
+% notes:
+% from Parasol, http://www.parallab.uib.no/projects/parasol/data
+%-------------------------------------------------------------------------------
