@@ -173,7 +173,7 @@ int main( int argc, char** argv )
 		for (unsigned int i = 0; i < vertex_size; ++i)
 			distance[i] = D_INFINITY;
 		distance[0]=0;
-		
+		std::cout<<"1111111"<<std::endl;
 		parse_graph::covertToGraphEdgeFormat(parsedGraph, edges);
 		if (sortOrder == SortBySrc) {
 			mergeSortSeq(edges, sizeof(GraphEdge_t), nEdges, graphEdgeComparatorSrc);	
