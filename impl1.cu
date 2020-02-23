@@ -163,8 +163,11 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	for (int i = 0; i < nVertices-1; ++i) {
 		cudaMemset(d_is_changed, 0, sizeof(int));
 		if (isIncore == 1){
+			std::cout<<"9999999"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu, d_edges, nEdges, d_distances_curr, d_distances_curr, d_is_changed);
+			std::cout<<"10 10 10 10 10 10"<<std::endl;
 			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			std::cout<<"11 11 11 11 11 11"<<std::endl;
 			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 		}
 		else if (useSharedMem == 0){
