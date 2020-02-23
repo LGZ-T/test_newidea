@@ -166,7 +166,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 			std::cout<<"9999999"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu, d_edges, nEdges, d_distances_curr, d_distances_curr, d_is_changed);
 			std::cout<<"10 10 10 10 10 10"<<std::endl;
-			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"11 11 11 11 11 11"<<std::endl;
 			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 		}
@@ -174,7 +174,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 			std::cout<<"55555555"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu,d_edges, nEdges, d_distances_curr, d_distances_prev, d_is_changed);
 			std::cout<<"66666666"<<std::endl;
-			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"77777777"<<std::endl;
 			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 			std::cout<<"88888888"<<std::endl;
