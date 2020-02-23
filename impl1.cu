@@ -24,7 +24,7 @@ __global__ void pulling_kernel(unsigned int *trace, GraphEdge_t* edges, unsigned
 	unsigned int tmp = 0;
 	GraphEdge_t *edge;
 	unsigned int *temp;
-	unsigned int j=0;
+	unsigned int j=threadId*6*(nEdgesPerWarp/32+1);
 	for (int i = beg + lane; i<= end && i< nEdges; i += 32) {
 		edge = edges + i;
 		src = edge->src;
