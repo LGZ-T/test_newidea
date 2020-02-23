@@ -7,7 +7,7 @@
 #include "initial_graph.hpp"
 #include "parse_graph.hpp"
 
-__global__ void pulling_kernel(uint *trace, GraphEdge_t* edges, uint nEdges, uint* d_curr, uint* d_prev, int* is_changed) {
+__global__ void pulling_kernel(unsigned int *trace, GraphEdge_t* edges, unsigned int nEdges, unsigned int* d_curr, unsigned int* d_prev, int* is_changed) {
 
 	int threadId = blockDim.x * blockIdx.x + threadIdx.x;
 	int threadCount = blockDim.x * gridDim.x;
@@ -18,25 +18,26 @@ __global__ void pulling_kernel(uint *trace, GraphEdge_t* edges, uint nEdges, uin
 	int beg = nEdgesPerWarp*warpId;
 	int end = beg + nEdgesPerWarp - 1;
 
-	uint src = 0;
-	uint dest = 0;
-	uint weight = 0;
-	uint tmp = 0;
-	GraphEdge_t *edge,*temp;
-	uint j=0;
+	unsigned int src = 0;
+	unsigned int dest = 0;
+	unsigned int weight = 0;
+	unsigned int tmp = 0;
+	GraphEdge_t *edge;
+	unsigned int *temp;
+	unsigned int j=0;
 	for (int i = beg + lane; i<= end && i< nEdges; i += 32) {
 		edge = edges + i;
 		src = edge->src;
 		temp = &(edge->src);
-		trace[j] = (uint)temp;
+		trace[j] = (unsigned int)temp;
 		dest = edge->dest;
 		temp = &(edge->dest);
 		j++;
-		trace[j] = (uint)temp;
+		trace[j] = (unsigned int)temp;
 		weight = edge->weight;
 		temp = &(edge->weight);
 		j++;
-		trace[j] = (uint)temp;
+		trace[j] = (unsigned int)temp;
 		j++;
 
 		tmp = d_prev[src] + weight;
@@ -56,7 +57,7 @@ __global__ void pulling_kernel(uint *trace, GraphEdge_t* edges, uint nEdges, uin
 	} 
 }
 
-__device__ uint min_dist(uint val1, uint val2) {
+__device__ unsigned int min_dist(unsigned int val1, unsigned int val2) {
 	if (val1 < val2) {
 		return val1;
 	} else {
@@ -64,9 +65,9 @@ __device__ uint min_dist(uint val1, uint val2) {
 	}
 }
 
-__global__ void pulling_kernel_smem(GraphEdge_t* edges, uint nEdges, uint nVertices, uint* d_curr, uint* d_prev, int* is_changed) {
+__global__ void pulling_kernel_smem(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, unsigned int* d_curr, unsigned int* d_prev, int* is_changed) {
 
-	__shared__ uint shared_mem[2048];
+	__shared__ unsigned int shared_mem[2048];
 
 	const int nEdgesPerWarp = 64;
 	int threadId = blockDim.x * blockIdx.x + threadIdx.x;
@@ -76,9 +77,9 @@ __global__ void pulling_kernel_smem(GraphEdge_t* edges, uint nEdges, uint nVerti
 	int nEdgesPerIter = countWarps * nEdgesPerWarp;
 	int nIters = nEdges % nEdgesPerIter ? nEdges / nEdgesPerIter + 1 : nEdges / nEdgesPerIter;
 
-	uint src = 0;
-	uint dest = 0;
-	uint weight = 0;
+	unsigned int src = 0;
+	unsigned int dest = 0;
+	unsigned int weight = 0;
 	GraphEdge_t *edge;
 	for (int iter = 0; iter < nIters; ++iter) {
 		int warpId = threadId / 32 + iter*countWarps;
@@ -133,43 +134,43 @@ __global__ void pulling_kernel_smem(GraphEdge_t* edges, uint nEdges, uint nVerti
 	}
 }
 
-void puller(GraphEdge_t* edges, uint nEdges, uint nVertices, uint* distance, int bsize, int bcount, int isIncore, int useSharedMem) {
+void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, unsigned int* distance, int bsize, int bcount, int isIncore, int useSharedMem) {
 	GraphEdge_t *d_edges;
-	uint* d_distances_curr;
-	uint* d_distances_prev;
+	unsigned int* d_distances_curr;
+	unsigned int* d_distances_prev;
 	int *d_is_changed;
 	int h_is_changed;
 	int count_iterations = 0;
 
 	cudaMalloc((void**)&d_edges, sizeof(GraphEdge_t)*nEdges);
-	cudaMalloc((void**)&d_distances_curr, sizeof(uint)*nVertices);
-	cudaMalloc((void**)&d_distances_prev, sizeof(uint)*nVertices);
+	cudaMalloc((void**)&d_distances_curr, sizeof(unsigned int)*nVertices);
+	cudaMalloc((void**)&d_distances_prev, sizeof(unsigned int)*nVertices);
 	cudaMalloc((void**)&d_is_changed, sizeof(int));
 
 	cudaMemcpy(d_edges, edges, sizeof(GraphEdge_t)*nEdges, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_distances_curr, distance, sizeof(uint)*nVertices, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_distances_prev, distance, sizeof(uint)*nVertices, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_distances_curr, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_distances_prev, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
 
 	setTime();
 	int threadCount = bcount*bsize;
 	int countWarps = threadCount % 32 ? threadCount / 32 + 1 : threadCount / 32;
 	int nEdgesPerWarp = nEdges % countWarps == 0 ? nEdges / countWarps : nEdges / countWarps + 1;
 	std::ofstream outputFile("lgzoutfile",std::ios::binary | std::ios::out|std::ios::app);
-	uint *trace = (uint *)malloc(bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1));
-	uint *trace_gpu;
-	cudaMalloc((void**)&trace_gpu,bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1));
+	unsigned int *trace = (unsigned int *)malloc(bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
+	unsigned int *trace_gpu;
+	cudaMalloc((void**)&trace_gpu,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 
 	for (int i = 0; i < nVertices-1; ++i) {
 		cudaMemset(d_is_changed, 0, sizeof(int));
 		if (isIncore == 1){
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu, d_edges, nEdges, d_distances_curr, d_distances_curr, d_is_changed);
-			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
-			outputFile.write((char *)trace,bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1));
+			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 		}
 		else if (useSharedMem == 0){
-			pulling_kernel<<<bcount, bsize>>>(d_edges, nEdges, d_distances_curr, d_distances_prev, d_is_changed);
-			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
-			outputFile.write((char *)trace,bcount*bsize*sizeof(uint)*6*(nEdgesPerWarp/32+1));
+			pulling_kernel<<<bcount, bsize>>>(trace_gpu,d_edges, nEdges, d_distances_curr, d_distances_prev, d_is_changed);
+			cudaMemcpy(&trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 		}
 		else{
 			pulling_kernel_smem<<<bcount, bsize>>>(d_edges, nEdges, nVertices, d_distances_curr, d_distances_prev, d_is_changed);
@@ -177,7 +178,7 @@ void puller(GraphEdge_t* edges, uint nEdges, uint nVertices, uint* distance, int
 
 		cudaDeviceSynchronize();
 		if (isIncore == 0)
-			cudaMemcpy(d_distances_prev, d_distances_curr, sizeof(uint)*nVertices, cudaMemcpyDeviceToDevice);
+			cudaMemcpy(d_distances_prev, d_distances_curr, sizeof(unsigned int)*nVertices, cudaMemcpyDeviceToDevice);
 
 		count_iterations++;
 
@@ -192,7 +193,7 @@ void puller(GraphEdge_t* edges, uint nEdges, uint nVertices, uint* distance, int
 	outputFile.close();
 	std::cout << "Took "<<count_iterations << " iterations " << getTime() << "ms.\n";
 
-	cudaMemcpy(distance, d_distances_curr, sizeof(uint)*nVertices, cudaMemcpyDeviceToHost);
+	cudaMemcpy(distance, d_distances_curr, sizeof(unsigned int)*nVertices, cudaMemcpyDeviceToHost);
 
 	cudaFree(d_edges);
 	cudaFree(d_distances_curr);
