@@ -150,7 +150,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	cudaMemcpy(d_edges, edges, sizeof(GraphEdge_t)*nEdges, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_distances_curr, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_distances_prev, distance, sizeof(unsigned int)*nVertices, cudaMemcpyHostToDevice);
-
+	std::cout << "3333333" << std::endl;
 	setTime();
 	int threadCount = bcount*bsize;
 	int countWarps = threadCount % 32 ? threadCount / 32 + 1 : threadCount / 32;
@@ -159,7 +159,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	unsigned int *trace = (unsigned int *)malloc(bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
 	unsigned int *trace_gpu;
 	cudaMalloc((void**)&trace_gpu,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
-
+	std::cout<<"444444" << std::endl;
 	for (int i = 0; i < nVertices-1; ++i) {
 		cudaMemset(d_is_changed, 0, sizeof(int));
 		if (isIncore == 1){
