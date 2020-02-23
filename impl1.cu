@@ -7,7 +7,7 @@
 #include "initial_graph.hpp"
 #include "parse_graph.hpp"
 
-__global__ void pulling_kernel(unsigned int *trace, GraphEdge_t* edges, unsigned int nEdges, unsigned int* d_curr, unsigned int* d_prev, int* is_changed) {
+__global__ void pulling_kernel(unsigned long *trace, GraphEdge_t* edges, unsigned int nEdges, unsigned int* d_curr, unsigned int* d_prev, int* is_changed) {
 
 	int threadId = blockDim.x * blockIdx.x + threadIdx.x;
 	int threadCount = blockDim.x * gridDim.x;
@@ -24,20 +24,20 @@ __global__ void pulling_kernel(unsigned int *trace, GraphEdge_t* edges, unsigned
 	unsigned int tmp = 0;
 	GraphEdge_t *edge;
 	unsigned int *temp;
-	unsigned int j=threadId*6*(nEdgesPerWarp/32+1);
+	unsigned long j=threadId*6*(nEdgesPerWarp/32+1);
 	for (int i = beg + lane; i<= end && i< nEdges; i += 32) {
 		edge = edges + i;
 		src = edge->src;
 		temp = &(edge->src);
-		trace[j] = (unsigned int)temp;
+		trace[j] = (unsigned long)temp;
 		dest = edge->dest;
 		temp = &(edge->dest);
 		j++;
-		trace[j] = (unsigned int)temp;
+		trace[j] = (unsigned long)temp;
 		weight = edge->weight;
 		temp = &(edge->weight);
 		j++;
-		trace[j] = (unsigned int)temp;
+		trace[j] = (unsigned long)temp;
 		j++;
 
 		tmp = d_prev[src] + weight;
@@ -156,9 +156,9 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	int countWarps = threadCount % 32 ? threadCount / 32 + 1 : threadCount / 32;
 	int nEdgesPerWarp = nEdges % countWarps == 0 ? nEdges / countWarps : nEdges / countWarps + 1;
 	std::ofstream outputFile("lgzoutfile",std::ios::binary | std::ios::out|std::ios::app);
-	unsigned int *trace = (unsigned int *)malloc(bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
-	unsigned int *trace_gpu;
-	cudaMalloc((void**)&trace_gpu,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
+	unsigned long *trace = (unsigned long *)malloc(bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
+	unsigned long *trace_gpu;
+	cudaMalloc((void**)&trace_gpu,bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
 	std::cout<<"444444" << std::endl;
 	for (int i = 0; i < nVertices-1; ++i) {
 		cudaMemset(d_is_changed, 0, sizeof(int));
@@ -166,17 +166,17 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 			std::cout<<"9999999"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu, d_edges, nEdges, d_distances_curr, d_distances_curr, d_is_changed);
 			std::cout<<"10 10 10 10 10 10"<<std::endl;
-			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"11 11 11 11 11 11"<<std::endl;
-			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
+			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
 		}
 		else if (useSharedMem == 0){
 			std::cout<<"55555555"<<std::endl;
 			pulling_kernel<<<bcount, bsize>>>(trace_gpu,d_edges, nEdges, d_distances_curr, d_distances_prev, d_is_changed);
 			std::cout<<"66666666"<<std::endl;
-			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
+			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"77777777"<<std::endl;
-			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned int)*6*(nEdgesPerWarp/32+1));
+			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
 			std::cout<<"88888888"<<std::endl;
 		}
 		else{
@@ -199,7 +199,7 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 	cudaFree(trace_gpu);
 	outputFile.close();
 	std::cout << "Took "<<count_iterations << " iterations " << getTime() << "ms.\n";
-
+	std::cout << sizeof(unsigned long) << std::endl;
 	cudaMemcpy(distance, d_distances_curr, sizeof(unsigned int)*nVertices, cudaMemcpyDeviceToHost);
 
 	cudaFree(d_edges);
