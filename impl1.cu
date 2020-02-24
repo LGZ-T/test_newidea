@@ -179,9 +179,9 @@ void puller(GraphEdge_t* edges, unsigned int nEdges, unsigned int nVertices, uns
 			cudaMemcpy(trace, trace_gpu, bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1), cudaMemcpyDeviceToHost);
 			std::cout<<"77777777"<<std::endl;
 			outputFile.write((char *)trace,bcount*bsize*sizeof(unsigned long)*6*(nEdgesPerWarp/32+1));
-			std::cout<<"88888888"<<std::endl;
 		}
 		else{
+			std::cout<<"88888888"<<std::endl;
 			pulling_kernel_smem<<<bcount, bsize>>>(d_edges, nEdges, nVertices, d_distances_curr, d_distances_prev, d_is_changed);
 		}
 
