@@ -20,6 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <cuda.h>
+#include <fstream>
 
 #define MAX_THREADS_PER_BLOCK 512
 
@@ -90,13 +91,14 @@ void BFSGraph( int argc, char** argv)
 		num_of_blocks = (int)ceil(no_of_nodes/(double)MAX_THREADS_PER_BLOCK); 
 		num_of_threads_per_block = MAX_THREADS_PER_BLOCK; 
 	}
-	printf("num_of_blocks=%d, num_of_threads_per_block=%d\n",num_of_blocks,num_of_threads_per_block);
+	//num_of_blocks=1954, num_of_threads_per_block=512
+	//printf("num_of_blocks=%d, num_of_threads_per_block=%d\n",num_of_blocks,num_of_threads_per_block);
 	// allocate host memory
 	Node* h_graph_nodes = (Node*) malloc(sizeof(Node)*no_of_nodes);
 	bool *h_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_updating_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_graph_visited = (bool*) malloc(sizeof(bool)*no_of_nodes);
-
+	int *trace = (int *)malloc(sizeof(int)*num_of_blocks*num_of_threads_per_block*40);
 	int start, edgeno;   
 	// initalize the memory
 	int max=0;
@@ -112,7 +114,8 @@ void BFSGraph( int argc, char** argv)
 		h_updating_graph_mask[i]=false;
 		h_graph_visited[i]=false;
 	}
-	printf("max=%d\n",max);
+	//max=18 each thread uses 40
+	//printf("max=%d\n",max);
 
 	//read the source node from the file
 	fscanf(fp,"%d",&source);
@@ -138,6 +141,8 @@ void BFSGraph( int argc, char** argv)
 
 	printf("Read File\n");
 
+	int *trace_gpu;
+	cudaMalloc((void**)&trace_gpu,sizeof(int)*num_of_blocks*num_of_threads_per_block*40);
 	//Copy the Node list to device memory
 	Node* d_graph_nodes;
 	cudaMalloc( (void**) &d_graph_nodes, sizeof(Node)*no_of_nodes) ;
@@ -187,15 +192,23 @@ void BFSGraph( int argc, char** argv)
 	printf("Start traversing the tree\n");
 	bool stop;
 	//Call the Kernel untill all the elements of Frontier are not false
+	std::ofstream outputFile("bfs_result.txt",std::ios::out|std::ios::app);
+
 	do
 	{
 		//if no thread changes this value then the loop stops
 		stop=false;
 		cudaMemcpy( d_over, &stop, sizeof(bool), cudaMemcpyHostToDevice) ;
-		Kernel<<< grid, threads, 0 >>>( d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, d_graph_visited, d_cost, no_of_nodes);
-		// check if kernel execution generated and error
-		
+		memset(trace,0,sizeof(int)*num_of_blocks*num_of_threads_per_block*40);
+		cudaMemcpy(trace_gpu,trace,sizeof(int)*num_of_blocks*num_of_threads_per_block*40,cudaMemcpyHostToDevice);
 
+		Kernel<<< grid, threads, 0 >>>(trace_gpu, d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, d_graph_visited, d_cost, no_of_nodes);
+		// check if kernel execution generated and error
+		cudaMemcpy(trace,trace_gpu,sizeof(int)*num_of_blocks*num_of_threads_per_block*40,cudaMemcpyDeviceToHost);
+		for(int i=0;i<num_of_blocks*num_of_threads_per_block*40;i++){
+			outputFile<<trace[i]<<" ";
+		}
+		outputFile<<std::endl;
 		Kernel2<<< grid, threads, 0 >>>( d_graph_mask, d_updating_graph_mask, d_graph_visited, d_over, no_of_nodes);
 		// check if kernel execution generated and error
 		
@@ -205,7 +218,7 @@ void BFSGraph( int argc, char** argv)
 	}
 	while(stop);
 
-
+	outputFile.close();
 	printf("Kernel Executed %d times\n",k);
 
 	// copy result from device to host
@@ -220,12 +233,14 @@ void BFSGraph( int argc, char** argv)
 
 
 	// cleanup memory
+	free(trace);
 	free( h_graph_nodes);
 	free( h_graph_edges);
 	free( h_graph_mask);
 	free( h_updating_graph_mask);
 	free( h_graph_visited);
 	free( h_cost);
+	cudaFree(trace_gpu);
 	cudaFree(d_graph_nodes);
 	cudaFree(d_graph_edges);
 	cudaFree(d_graph_mask);
