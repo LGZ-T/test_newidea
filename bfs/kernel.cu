@@ -26,14 +26,14 @@ Kernel( Node* g_graph_nodes, int* g_graph_edges, bool* g_graph_mask, bool* g_upd
 	{
 		g_graph_mask[tid]=false;
 		for(int i=g_graph_nodes[tid].starting; i<(g_graph_nodes[tid].no_of_edges + g_graph_nodes[tid].starting); i++)
-			{
+		{
 			int id = g_graph_edges[i];
 			if(!g_graph_visited[id])
-				{
+			{
 				g_cost[id]=g_cost[tid]+1;
 				g_updating_graph_mask[id]=true;
-				}
 			}
+		}
 	}
 }
 

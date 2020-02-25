@@ -90,7 +90,7 @@ void BFSGraph( int argc, char** argv)
 		num_of_blocks = (int)ceil(no_of_nodes/(double)MAX_THREADS_PER_BLOCK); 
 		num_of_threads_per_block = MAX_THREADS_PER_BLOCK; 
 	}
-
+	printf("num_of_blocks=%d, num_of_threads_per_block=%d\n",num_of_blocks,num_of_threads_per_block);
 	// allocate host memory
 	Node* h_graph_nodes = (Node*) malloc(sizeof(Node)*no_of_nodes);
 	bool *h_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
@@ -99,15 +99,20 @@ void BFSGraph( int argc, char** argv)
 
 	int start, edgeno;   
 	// initalize the memory
+	int max=0;
 	for( unsigned int i = 0; i < no_of_nodes; i++) 
 	{
 		fscanf(fp,"%d %d",&start,&edgeno);
 		h_graph_nodes[i].starting = start;
 		h_graph_nodes[i].no_of_edges = edgeno;
+		if(edgeno>max){
+			max = edgeno;
+		}
 		h_graph_mask[i]=false;
 		h_updating_graph_mask[i]=false;
 		h_graph_visited[i]=false;
 	}
+	printf("max=%d\n",max);
 
 	//read the source node from the file
 	fscanf(fp,"%d",&source);
